@@ -126,7 +126,6 @@
 
     .clock-wrap {
       position: relative;
-      /* 🛠️ 修正：縦幅の最大値を 68svh から 45svh に縮小し、スマホ画面内で問題文が押し出されないように改善 */
       width: min(94vw, 45svh);
       aspect-ratio: 1 / 1;
       max-width: 700px;
@@ -229,25 +228,33 @@
       stroke-width: 4;
     }
 
-    /* 🛠️ 修正：文字盤中心のデジタル数字を完全に非表示にする */
+    /* 🛠️ 修正：基本は非表示（スマホ用） */
     .time-display {
       display: none;
+      pointer-events: none;
     }
 
     .time-card {
       fill: #ffffff;
       stroke: #333333;
-      stroke-width: 3.5;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,.18));
+      stroke-width: 2.5;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,.15));
     }
 
     .time-text {
-      font-size: 34px;
+      font-size: 24px;
       font-weight: 900;
       fill: #222222;
       text-anchor: middle;
       dominant-baseline: central;
       letter-spacing: 1px;
+    }
+
+    /* 🛠️ 修正：タブレット・PC（横画面 または 幅768px以上）の時だけ表示 */
+    @media (orientation: landscape), (min-width: 768px) {
+      .time-display {
+        display: block;
+      }
     }
 
     .controls {
@@ -351,6 +358,12 @@
 
     <div class="clock-wrap" id="clockWrap">
       <svg id="clockSvg" viewBox="0 0 500 500" role="img" aria-label="動かせる時計">
+        <!-- 🛠️ 修正：時計の上の空きスペース（y座標10付近）に小さく配置 -->
+        <g id="timeDisplay" class="time-display">
+          <rect class="time-card" x="165" y="10" width="170" height="40" rx="12"></rect>
+          <text id="timeText" class="time-text" x="250" y="32">10時00分</text>
+        </g>
+        
         <g id="dotLayer"></g>
         <circle class="face" cx="250" cy="250" r="184"></circle>
         <circle class="inner-ring" cx="250" cy="250" r="145"></circle>
@@ -361,15 +374,11 @@
         <line id="minuteHand" class="minute-hand" x1="250" y1="250" x2="250" y2="93"></line>
         <line id="minuteTouch" class="hand-touch minute-touch" x1="250" y1="250" x2="250" y2="82"></line>
         <circle class="center-dot" cx="250" cy="250" r="13"></circle>
-        <g id="timeDisplay" class="time-display">
-          <rect class="time-card" x="159" y="214" width="182" height="72" rx="16"></rect>
-          <text id="timeText" class="time-text" x="250" y="251">10時00分</text>
-        </g>
       </svg>
     </div>
 
     <div class="controls" aria-label="操作ボタン">
-      <button id="setBase" class="set-button" aria-label="セットまたは答え合わせ">時間をセット</button>
+      <button id="setBase" class="set-button" aria-label="セットまたは答え合わせ">じかんをセット</button>
       <button id="resetClock" class="reset-button" aria-label="時計をリセットする">やりなおす</button>
       <button id="back10" aria-label="10分もどる">−10</button>
       <button id="plus10" aria-label="10分すすめる">＋10</button>
@@ -557,7 +566,7 @@
       baseTotalMinutes = null;
       step = 'start';
       totalMinutes = START_CLOCK;
-      setBaseButton.textContent = 'じかんをセット';
+      setBaseButton.textContent = 'しゅっぱつ時間をセット';
 
       const amounts = [1, 5, 10, 15, 20, 25, 30];
       const minuteCandidates = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -581,7 +590,6 @@
       problemText.textContent = `${startHour}時${minuteLabel(startMinute)}の${amount}分${directionText}は？`;
       updateClock();
 
-      // 🔥 Analytics: 新しい問題の発生をトラッキング
       if (typeof gtag === 'function') {
         gtag('event', 'problem_start', {
           'problem_text': problemText.textContent,
@@ -600,7 +608,6 @@
       clearResult();
       updateClock();
 
-      // 🔥 Analytics: やりなおしボタン押下をトラッキング
       if (typeof gtag === 'function') {
         gtag('event', 'click_reset', {
           'problem_text': problem ? problemText.textContent : 'none'
@@ -718,7 +725,6 @@
         clearResult();
         updateClock();
 
-        // 🔥 Analytics: 出発時刻をセットした成否を記録
         if (typeof gtag === 'function') {
           gtag('event', 'step_set_base', {
             'is_correct_start': sameClockTime(baseTotalMinutes, problem.startTotal) ? 'yes' : 'no'
@@ -733,7 +739,6 @@
       if (startOk && answerOk) {
         showResult('いいね！', 'good');
 
-        // 🔥 Analytics: 正解イベントを記録
         if (typeof gtag === 'function') {
           gtag('event', 'answer_success', {
             'problem_text': problemText.textContent
@@ -744,7 +749,6 @@
       } else {
         showResult('おしい！', 'try');
 
-        // 🔥 Analytics: 不正解イベントを記録
         if (typeof gtag === 'function') {
           gtag('event', 'answer_failed', {
             'problem_text': problemText.textContent,
