@@ -734,7 +734,7 @@
       if (dist > 112 && dist < 250) startMinuteDrag(evt);
     });
 
-    setBaseButton.addEventListener('click', () => {
+    /*setBaseButton.addEventListener('click', () => {
       clearTimeout(nextTimer);
       if (step === 'start') {
         baseTotalMinutes = totalMinutes;
@@ -750,6 +750,47 @@
         nextTimer = setTimeout(makeProblem, 1100);
       } else {
         showResult('おしい！', 'try');
+      }
+    });
+    */
+    setBaseButton.addEventListener('click', () => {
+      clearTimeout(nextTimer);
+      if (step === 'start') {
+        baseTotalMinutes = totalMinutes;
+        step = 'solve';
+        clearResult();
+        updateClock();
+        return;
+      }
+      const startOk = sameClockTime(baseTotalMinutes, problem.startTotal);
+      const answerOk = sameClockTime(totalMinutes, problem.answerTotal);
+      
+      if (startOk && answerOk) {
+        showResult('いいね！', 'good');
+        
+        // 正解データをGoogle Analyticsに送信
+        if (typeof gtag === 'function') {
+          gtag('event', 'quiz_result', {
+            'status': 'correct',
+            'problem_text': problemText.textContent,
+            'amount_minutes': problem.amount,
+            'direction': problem.direction === 1 ? '後' : '前'
+          });
+        }
+        
+        nextTimer = setTimeout(makeProblem, 1100);
+      } else {
+        showResult('おしい！', 'try');
+        
+        // 不正解データをGoogle Analyticsに送信
+        if (typeof gtag === 'function') {
+          gtag('event', 'quiz_result', {
+            'status': 'incorrect',
+            'problem_text': problemText.textContent,
+            'amount_minutes': problem.amount,
+            'direction': problem.direction === 1 ? '後' : '前'
+          });
+        }
       }
     });
 
