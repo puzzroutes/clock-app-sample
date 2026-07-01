@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ぱずルート みえる化時計β版</title>
+
    <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-96PXYL98V2"></script>
 <script>
@@ -11,8 +14,7 @@
 
   gtag('config', 'G-96PXYL98V2');
 </script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>時計 文章問題</title>
+
   <style>
     :root {
       --bg: #fffaf1;
@@ -226,13 +228,12 @@
       stroke-width: 4;
     }
 
+    /* 🔥 バグ修正：opacityを1にしてデジタル数字を常に表示 */
     .time-display {
-      opacity: 0;
+      opacity: 1;
       pointer-events: none;
       transition: opacity .12s ease;
     }
-
-    .show-number .time-display { opacity: 1; }
 
     .time-card {
       fill: #ffffff;
@@ -369,8 +370,9 @@
     </div>
 
     <div class="controls" aria-label="操作ボタン">
-      <button id="setBase" class="set-button" aria-label="セットまたは答え合わせ">セット</button>
-      <button id="resetClock" class="reset-button" aria-label="時計をリセットする">リセット</button>
+      <!-- UI向上のため初期テキストを「しゅっぱつ時間をセット」に変更 -->
+      <button id="setBase" class="set-button" aria-label="セットまたは答え合わせ">しゅっぱつ時間をセット</button>
+      <button id="resetClock" class="reset-button" aria-label="時計をリセットする">やりなおす</button>
       <button id="back10" aria-label="10分もどる">−10</button>
       <button id="plus10" aria-label="10分すすめる">＋10</button>
       <button id="back5" aria-label="5分もどる">−5</button>
@@ -398,7 +400,6 @@
     const CX = 250, CY = 250;
     const START_CLOCK = 10 * 60;
     let totalMinutes = START_CLOCK;
-    let showNumber = false;
     let dragging = null;
     let baseTotalMinutes = null;
     let step = 'start'; // start: 出発時刻をセット / solve: 答え合わせ
@@ -558,6 +559,7 @@
       baseTotalMinutes = null;
       step = 'start';
       totalMinutes = START_CLOCK;
+      setBaseButton.textContent = 'しゅっぱつ時間をセット';
 
       const amounts = [1, 5, 10, 15, 20, 25, 30];
       const minuteCandidates = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -580,6 +582,15 @@
       problem = { startHour, startMinute, amount, direction, startTotal, answerTotal };
       problemText.textContent = `${startHour}時${minuteLabel(startMinute)}の${amount}分${directionText}は？`;
       updateClock();
+
+      // 🔥 Analytics: 新しい問題の発生をトラッキング
+      if (typeof gtag === 'function') {
+        gtag('event', 'problem_start', {
+          'problem_text': problemText.textContent,
+          'direction': directionText,
+          'amount': amount
+        });
+      }
     }
 
     function resetAttempt() {
@@ -587,8 +598,16 @@
       totalMinutes = START_CLOCK;
       baseTotalMinutes = null;
       step = 'start';
+      setBaseButton.textContent = 'しゅっぱつ時間をセット';
       clearResult();
       updateClock();
+
+      // 🔥 Analytics: やりなおしボタン押下をトラッキング
+      if (typeof gtag === 'function') {
+        gtag('event', 'click_reset', {
+          'problem_text': problem ? problemText.textContent : 'none'
+        });
+      }
     }
 
     function setMinuteFromValue(value) {
@@ -692,63 +711,52 @@
     document.getElementById('back5').addEventListener('click', () => adjustMinutes(-5));
     document.getElementById('back10').addEventListener('click', () => adjustMinutes(-10));
 
-    /*
     setBaseButton.addEventListener('click', () => {
       clearTimeout(nextTimer);
       if (step === 'start') {
         baseTotalMinutes = totalMinutes;
         step = 'solve';
+        setBaseButton.textContent = 'こたえあわせ';
         clearResult();
         updateClock();
-        return;
-      }
 
-      const startOk = sameClockTime(baseTotalMinutes, problem.startTotal);
-      const answerOk = sameClockTime(totalMinutes, problem.answerTotal);
-
-      if (startOk && answerOk) {
-        showResult('いいね！', 'good');
-        nextTimer = setTimeout(makeProblem, 1100);
-      } else {
-        showResult('おしい！', 'try');
-      }
-    });
-    */
-     setBaseButton.addEventListener('click', () => {
-      clearTimeout(nextTimer);
-      if (step === 'start') {
-        baseTotalMinutes = totalMinutes;
-        step = 'solve';
-        clearResult();
-        updateClock();
-        return;
-      }
-      const startOk = sameClockTime(baseTotalMinutes, problem.startTotal);
-      const answerOk = sameClockTime(totalMinutes, problem.answerTotal);
-      
-      if (startOk && answerOk) {
-        showResult('いいね！', 'good');
-        
-        // 正解データをGoogle Analyticsに送信
+        // 🔥 Analytics: 出発時刻をセットした成否を記録
         if (typeof gtag === 'function') {
-          gtag('event', 'quiz_result', {
-            'status': 'correct',
-            'problem_text': problemText.textContent,
-            'amount_minutes': problem.amount,
-            'direction': problem.direction === 1 ? '後' : '前'
+          gtag('event', 'step_set_base', {
+            'is_correct_start': sameClockTime(baseTotalMinutes, problem.startTotal) ? 'yes' : 'no'
           });
         }
-        
+        return;
+      }
+
+      const startOk = sameClockTime(baseTotalMinutes, problem.startTotal);
+      const answerOk = sameClockTime(totalMinutes, problem.answerTotal);
+
+      if (startOk && answerOk) {
+        showResult('いいね！', 'good');
+
+        // 🔥 Analytics: 正解イベントを記録
+        if (typeof gtag === 'function') {
+          gtag('event', 'answer_success', {
+            'problem_text': problemText.textContent
+          });
+        }
+
         nextTimer = setTimeout(makeProblem, 1100);
       } else {
         showResult('おしい！', 'try');
 
-    resetButton.addEventListener('click', resetAttempt);
-
-    svg.addEventListener('dblclick', () => {
-      showNumber = !showNumber;
-      svg.classList.toggle('show-number', showNumber);
+        // 🔥 Analytics: 不正解イベントを記録
+        if (typeof gtag === 'function') {
+          gtag('event', 'answer_failed', {
+            'problem_text': problemText.textContent,
+            'fail_type': !startOk ? 'start_time_wrong' : 'calculation_wrong'
+          });
+        }
+      }
     });
+
+    resetButton.addEventListener('click', resetAttempt);
 
     buildClock();
     makeProblem();
