@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>時計 扇形</title>
+  <style>
+    :root {
+      --bg: #fffaf1;
+      --clock: #ffffff;
+      --line: #2b2b2b;
+      --minute-hand: #ef7d38;
+      --hour-hand: #444444;
+      --center: #2b2b2b;
+      --shadow: rgba(0,0,0,.12);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      background: var(--bg);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(7px, 1.2vh, 12px);
+      padding: max(8px, env(safe-area-inset-top)) 8px max(10px, env(safe-area-inset-bottom));
+      position: relative;
+    }
+
+    .problem-wrap {
+      width: min(94vw, 720px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 0 0 auto;
+      z-index: 2;
+    }
+
+    .problem-card {
+      width: 100%;
+      background: #ffffff;
+      border: 4px solid #333333;
+      border-radius: 22px;
+      box-shadow: 0 5px 0 #333333;
+      min-height: clamp(54px, 8.5svh, 82px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: clamp(25px, 5.9vw, 44px);
+      font-weight: 900;
+      color: #222222;
+      line-height: 1.1;
+    }
+
+    .result {
+      height: clamp(34px, 4.8svh, 50px);
+      min-width: min(88vw, 360px);
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: clamp(24px, 5.7vw, 40px);
+      font-weight: 900;
+      color: #222222;
+      opacity: 0;
+      transform: scale(.92);
+      transition: opacity .12s ease, transform .12s ease, background .12s ease;
+      pointer-events: none;
+    }
+
+    .result.show {
+      opacity: 1;
+      transform: scale(1);
+      background: #ffffff;
+      border: 3px solid #333333;
+      box-shadow: 0 4px 0 #333333;
+    }
+
+    .result.good {
+      background: #dff8e3;
+      border-color: #24762e;
+      color: #185b20;
+      box-shadow: 0 4px 0 #24762e;
+    }
+
+    .result.try {
+      background: #fff2d7;
+      border-color: #b36b1c;
+      color: #7b420d;
+      box-shadow: 0 4px 0 #b36b1c;
+    }
+
+    .work-area {
+      width: min(96vw, 1080px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(8px, 1.4vh, 14px);
+      z-index: 1;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+
+    .clock-wrap {
+      position: relative;
+      width: min(94vw, 58svh, 650px);
+      aspect-ratio: 1 / 1;
+      filter: drop-shadow(0 14px 24px var(--shadow));
+      flex: 0 1 auto;
+      min-height: 0;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+    }
+
+    .face {
+      fill: var(--clock);
+      stroke: var(--line);
+      stroke-width: 4;
+    }
+
+    .inner-ring {
+      fill: none;
+      stroke: #f0d8b2;
+      stroke-width: 3;
+    }
+
+    .minute-dot {
+      fill: #f5a85c;
+      stroke: #ffffff;
+      stroke-width: 1.7;
+      opacity: .92;
+      pointer-events: none;
+    }
+
+    .minute-dot.interval {
+      fill: #ef7d38;
+      stroke: #ffffff;
+      stroke-width: 1.9;
+    }
+
+    .major-tick {
+      stroke: var(--line);
+      stroke-width: 5.2;
+      stroke-linecap: round;
+    }
+
+    .minor-tick {
+      stroke: #b99e78;
+      stroke-width: 2;
+      stroke-linecap: round;
+      opacity: .75;
+    }
+
+    .num {
+      font-size: 36px;
+      font-weight: 800;
+      fill: var(--line);
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .sector-guide {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .12s ease;
+      cursor: grab;
+    }
+
+    .sector-guide.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sector-guide.dragging { cursor: grabbing; }
+
+    .sector-fill {
+      fill: rgba(111, 200, 255, .45);
+      stroke: #1678a8;
+      stroke-width: 4;
+      stroke-linejoin: round;
+    }
+
+    .sector-outline {
+      fill: none;
+      stroke: rgba(255,255,255,.78);
+      stroke-width: 8;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .sector-handle {
+      fill: #ffffff;
+      stroke: #333333;
+      stroke-width: 4;
+      filter: drop-shadow(0 3px 3px rgba(0,0,0,.22));
+    }
+
+    .sector-label-card {
+      fill: #ffffff;
+      stroke: #333333;
+      stroke-width: 3;
+      filter: drop-shadow(0 3px 4px rgba(0,0,0,.16));
+      pointer-events: none;
+    }
+
+    .sector-label {
+      font-size: 30px;
+      font-weight: 900;
+      text-anchor: middle;
+      dominant-baseline: central;
+      fill: #222222;
+      pointer-events: none;
+    }
+
+    .hour-hand {
+      stroke: var(--hour-hand);
+      stroke-width: 12;
+      stroke-linecap: round;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,.2));
+      cursor: grab;
+    }
+
+    .minute-hand {
+      stroke: var(--minute-hand);
+      stroke-width: 8;
+      stroke-linecap: round;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,.18));
+      cursor: grab;
+    }
+
+    .hand-touch {
+      stroke: transparent;
+      stroke-linecap: round;
+      cursor: grab;
+    }
+
+    .minute-touch { stroke-width: 34; }
+    .hour-touch { stroke-width: 42; }
+
+    .center-dot {
+      fill: var(--center);
+      stroke: #ffffff;
+      stroke-width: 4;
+    }
+
+    .time-display {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .12s ease;
+    }
+
+    .show-number .time-display { opacity: 1; }
+
+    .time-card {
+      fill: #ffffff;
+      stroke: #333333;
+      stroke-width: 3.5;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,.18));
+    }
+
+    .time-text {
+      font-size: 34px;
+      font-weight: 900;
+      fill: #222222;
+      text-anchor: middle;
+      dominant-baseline: central;
+      letter-spacing: 1px;
+    }
+
+    .side-panel {
+      width: min(94vw, 720px);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+      z-index: 2;
+      flex: 0 0 auto;
+    }
+
+    button {
+      border: 3px solid #333;
+      background: #fff;
+      color: #222;
+      border-radius: 18px;
+      min-height: 52px;
+      font-size: clamp(20px, 4.8vw, 30px);
+      font-weight: 900;
+      box-shadow: 0 5px 0 #333;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+      line-height: 1;
+    }
+
+    button:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #333;
+    }
+
+    .set-button {
+      border-color: #24762e;
+      box-shadow: 0 5px 0 #24762e;
+      color: #185b20;
+    }
+
+    .reset-button {
+      border-color: #8a5a2b;
+      box-shadow: 0 5px 0 #8a5a2b;
+      color: #6b3d14;
+    }
+
+    .set-button.active { background: #dff8e3; }
+    .set-button:active { box-shadow: 0 1px 0 #24762e; }
+    .reset-button:active { box-shadow: 0 1px 0 #8a5a2b; }
+
+    .sector-buttons {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 7px;
+      width: 100%;
+    }
+
+    .sector-button {
+      min-height: clamp(58px, 9svh, 76px);
+      border-color: #1678a8;
+      box-shadow: 0 5px 0 #1678a8;
+      color: #115c80;
+      background: #f3fbff;
+      font-size: clamp(18px, 4.3vw, 28px);
+    }
+
+    .sector-button.active {
+      background: #d7f1ff;
+      transform: translateY(2px);
+      box-shadow: 0 3px 0 #1678a8;
+    }
+
+    .sector-button[data-minutes="10"] { background: #fff3d9; border-color: #b56a11; box-shadow: 0 5px 0 #b56a11; color: #784006; }
+    .sector-button[data-minutes="15"] { background: #ecfadf; border-color: #4d8b2f; box-shadow: 0 5px 0 #4d8b2f; color: #315e1e; }
+    .sector-button[data-minutes="30"] { background: #ffe4f0; border-color: #b04b75; box-shadow: 0 5px 0 #b04b75; color: #74314e; }
+    .sector-button[data-minutes="45"] { background: #eee8ff; border-color: #6450b7; box-shadow: 0 5px 0 #6450b7; color: #3f3182; }
+    .sector-button:active { box-shadow: 0 1px 0 currentColor; }
+
+    @media (orientation: landscape) {
+      .app {
+        gap: 8px;
+        padding: 8px;
+      }
+      .problem-wrap {
+        width: min(96vw, 900px);
+        flex-direction: row;
+        gap: 10px;
+      }
+      .problem-card {
+        min-height: 62px;
+        font-size: clamp(24px, 4vw, 38px);
+        flex: 1;
+      }
+      .result {
+        width: min(24vw, 260px);
+        min-width: 0;
+        height: 58px;
+        font-size: clamp(24px, 4vw, 38px);
+      }
+      .work-area {
+        flex-direction: row;
+        gap: 16px;
+      }
+      .clock-wrap {
+        width: min(78vh, 58vw, 650px);
+      }
+      .side-panel {
+        width: min(36vw, 360px);
+        grid-template-columns: 1fr 1fr;
+      }
+      .sector-buttons {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .sector-button:last-child { grid-column: 1 / -1; }
+      button { min-height: 58px; }
+    }
+
+    @media (max-height: 680px) and (orientation: portrait) {
+      .clock-wrap { width: min(82vw, 48svh, 520px); }
+      button { min-height: 48px; }
+      .sector-button { min-height: 52px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="時計の扇形アプリ">
+    <div class="problem-wrap">
+      <div id="problemText" class="problem-card">10時20分の15分前は？</div>
+      <div id="resultText" class="result" aria-live="polite"></div>
+    </div>
+
+    <div class="work-area">
+      <div class="clock-wrap" id="clockWrap">
+        <svg id="clockSvg" viewBox="0 0 500 500" role="img" aria-label="動かせる時計">
+          <circle class="face" cx="250" cy="250" r="184"></circle>
+          <circle class="inner-ring" cx="250" cy="250" r="145"></circle>
+          <g id="tickLayer"></g>
+          <g id="numberLayer"></g>
+          <g id="minuteDotLayer"></g>
+
+          <g id="sectorGuide" class="sector-guide" aria-label="分の扇形">
+            <path id="sectorOutline" class="sector-outline"></path>
+            <path id="sectorPath" class="sector-fill"></path>
+            <circle id="sectorHandle" class="sector-handle" r="15"></circle>
+            <rect id="sectorLabelCard" class="sector-label-card" rx="13" width="92" height="50"></rect>
+            <text id="sectorLabel" class="sector-label">10分</text>
+          </g>
+
+          <line id="hourHand" class="hour-hand" x1="250" y1="250" x2="250" y2="172"></line>
+          <line id="hourTouch" class="hand-touch hour-touch" x1="250" y1="250" x2="250" y2="162"></line>
+          <line id="minuteHand" class="minute-hand" x1="250" y1="250" x2="250" y2="93"></line>
+          <line id="minuteTouch" class="hand-touch minute-touch" x1="250" y1="250" x2="250" y2="82"></line>
+          <circle class="center-dot" cx="250" cy="250" r="13"></circle>
+          <g id="timeDisplay" class="time-display">
+            <rect class="time-card" x="159" y="214" width="182" height="72" rx="16"></rect>
+            <text id="timeText" class="time-text" x="250" y="251">10時00分</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="side-panel" aria-label="操作と分の扇形">
+        <button id="setBase" class="set-button" aria-label="セットまたは答え合わせ">セット</button>
+        <button id="resetClock" class="reset-button" aria-label="リセット">リセット</button>
+        <div class="sector-buttons" aria-label="分の扇形ボタン">
+          <button class="sector-button" data-minutes="5">5分</button>
+          <button class="sector-button" data-minutes="10">10分</button>
+          <button class="sector-button" data-minutes="15">15分</button>
+          <button class="sector-button" data-minutes="30">30分</button>
+          <button class="sector-button" data-minutes="45">45分</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const svg = document.getElementById('clockSvg');
+    const tickLayer = document.getElementById('tickLayer');
+    const numberLayer = document.getElementById('numberLayer');
+    const minuteDotLayer = document.getElementById('minuteDotLayer');
+    const minuteHand = document.getElementById('minuteHand');
+    const minuteTouch = document.getElementById('minuteTouch');
+    const hourHand = document.getElementById('hourHand');
+    const hourTouch = document.getElementById('hourTouch');
+    const timeText = document.getElementById('timeText');
+    const problemText = document.getElementById('problemText');
+    const resultText = document.getElementById('resultText');
+    const setBaseButton = document.getElementById('setBase');
+    const resetButton = document.getElementById('resetClock');
+    const sectorGuide = document.getElementById('sectorGuide');
+    const sectorPathEl = document.getElementById('sectorPath');
+    const sectorOutlineEl = document.getElementById('sectorOutline');
+    const sectorHandle = document.getElementById('sectorHandle');
+    const sectorLabel = document.getElementById('sectorLabel');
+    const sectorLabelCard = document.getElementById('sectorLabelCard');
+    const sectorButtons = Array.from(document.querySelectorAll('.sector-button'));
+
+    const CX = 250, CY = 250;
+    const START_CLOCK = 10 * 60;
+    const PIECES = [5, 10, 15, 30, 45];
+    let totalMinutes = START_CLOCK;
+    let showNumber = false;
+    let dragging = null;
+    let baseTotalMinutes = null;
+    let step = 'start';
+    let problem = null;
+    let nextTimer = null;
+    let sector = { minutes: null, rotation: 0, dragging: false };
+
+    function mod(n, m) { return ((n % m) + m) % m; }
+    function absoluteMinutes(hour, minute) {
+      const h = hour === 12 ? 0 : hour;
+      return h * 60 + minute;
+    }
+    function currentMinute() { return mod(totalMinutes, 60); }
+    function currentHour() {
+      const h = mod(Math.floor(totalMinutes / 60), 12);
+      return h === 0 ? 12 : h;
+    }
+    function sameClockTime(a, b) { return mod(a, 12 * 60) === mod(b, 12 * 60); }
+
+    function polar(radius, deg) {
+      const rad = (deg - 90) * Math.PI / 180;
+      return { x: CX + radius * Math.cos(rad), y: CY + radius * Math.sin(rad) };
+    }
+
+    function makeEl(name, attrs = {}) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      return el;
+    }
+
+    function buildClock() {
+      for (let i = 0; i < 60; i++) {
+        const deg = i * 6;
+        const outer = polar(i % 5 === 0 ? 177 : 174, deg);
+        const inner = polar(i % 5 === 0 ? 155 : 162, deg);
+        tickLayer.appendChild(makeEl('line', {
+          x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y,
+          class: i % 5 === 0 ? 'major-tick' : 'minor-tick'
+        }));
+      }
+      for (let n = 1; n <= 12; n++) {
+        const p = polar(124, n * 30);
+        const text = makeEl('text', { x: p.x, y: p.y, class: 'num' });
+        text.textContent = n;
+        numberLayer.appendChild(text);
+      }
+    }
+
+    function setLine(line, radius, deg) {
+      const p = polar(radius, deg);
+      line.setAttribute('x1', CX);
+      line.setAttribute('y1', CY);
+      line.setAttribute('x2', p.x);
+      line.setAttribute('y2', p.y);
+    }
+
+    function twoDigit(n) { return String(n).padStart(2, '0'); }
+
+    function renderMinuteDots() {
+      minuteDotLayer.innerHTML = '';
+
+      const dots = [];
+      const dotRadius = 205;
+      const dotSize = 4.6;
+
+      if (baseTotalMinutes !== null && step === 'solve') {
+        let diff = totalMinutes - baseTotalMinutes;
+        if (diff > 60) diff = 60;
+        if (diff < -60) diff = -60;
+        const direction = diff >= 0 ? 1 : -1;
+        const count = Math.min(60, Math.abs(diff));
+        for (let i = 1; i <= count; i++) {
+          dots.push({ minute: mod(baseTotalMinutes + direction * i, 60), interval: true });
+        }
+      } else {
+        const count = currentMinute();
+        for (let i = 1; i <= count; i++) {
+          dots.push({ minute: i % 60, interval: false });
+        }
+      }
+
+      dots.forEach(({ minute, interval }) => {
+        const p = polar(dotRadius, minute * 6);
+        minuteDotLayer.appendChild(makeEl('circle', {
+          cx: p.x,
+          cy: p.y,
+          r: dotSize,
+          class: interval ? 'minute-dot interval' : 'minute-dot'
+        }));
+      });
+    }
+
+    function updateClock() {
+      const minute = currentMinute();
+      const hour = currentHour();
+      const minuteDeg = minute * 6;
+      const hourDeg = (hour % 12) * 30 + minute * 0.5;
+      setLine(minuteHand, 157, minuteDeg);
+      setLine(minuteTouch, 169, minuteDeg);
+      setLine(hourHand, 82, hourDeg);
+      setLine(hourTouch, 94, hourDeg);
+      timeText.textContent = `${hour}時${twoDigit(minute)}分`;
+      setBaseButton.classList.toggle('active', baseTotalMinutes !== null);
+      renderMinuteDots();
+    }
+
+    function showResult(text, kind) {
+      resultText.textContent = text;
+      resultText.classList.remove('good', 'try');
+      resultText.classList.add('show', kind);
+    }
+
+    function clearResult() {
+      resultText.textContent = '';
+      resultText.classList.remove('show', 'good', 'try');
+    }
+
+    function randomItem(list) { return list[Math.floor(Math.random() * list.length)]; }
+    function minuteLabel(minute) { return `${minute}分`; }
+
+    function makeProblem() {
+      clearTimeout(nextTimer);
+      clearResult();
+      baseTotalMinutes = null;
+      step = 'start';
+      totalMinutes = START_CLOCK;
+      hideSector();
+
+      const direction = randomItem([-1, 1]);
+      const amount = randomItem(PIECES);
+      const minuteCandidates = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+      let possibleMinutes;
+      if (direction === 1) {
+        possibleMinutes = minuteCandidates.filter(m => m + amount < 60);
+      } else {
+        possibleMinutes = minuteCandidates.filter(m => m - amount >= 0);
+      }
+      const startHour = randomItem([1,2,3,4,5,6,7,8,9,10,11,12]);
+      const startMinute = randomItem(possibleMinutes);
+      const startTotal = absoluteMinutes(startHour, startMinute);
+      const answerTotal = startTotal + direction * amount;
+      const directionText = direction === 1 ? '後' : '前';
+      problem = { startHour, startMinute, amount, direction, startTotal, answerTotal };
+      problemText.textContent = `${startHour}時${minuteLabel(startMinute)}の${amount}分${directionText}は？`;
+      updateClock();
+    }
+
+    function resetAttempt() {
+      clearTimeout(nextTimer);
+      totalMinutes = START_CLOCK;
+      baseTotalMinutes = null;
+      step = 'start';
+      clearResult();
+      hideSector();
+      updateClock();
+    }
+
+    function setMinuteFromValue(value) {
+      const oldMinute = currentMinute();
+      let diff = value - oldMinute;
+      if (diff > 30) diff -= 60;
+      if (diff < -30) diff += 60;
+      totalMinutes += diff;
+      updateClock();
+    }
+
+    function setHourFromValue(hourValue) {
+      const minute = currentMinute();
+      const currentHourIndex = mod(Math.floor(totalMinutes / 60), 12);
+      const targetHourIndex = hourValue === 12 ? 0 : hourValue;
+      let diffHours = targetHourIndex - currentHourIndex;
+      if (diffHours > 6) diffHours -= 12;
+      if (diffHours < -6) diffHours += 12;
+      totalMinutes += diffHours * 60;
+      totalMinutes = Math.floor(totalMinutes / 60) * 60 + minute;
+      updateClock();
+    }
+
+    function getSvgPoint(evt) {
+      const pt = svg.createSVGPoint();
+      pt.x = evt.clientX;
+      pt.y = evt.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function degreesFromEvent(evt) {
+      const p = getSvgPoint(evt);
+      const dx = p.x - CX;
+      const dy = p.y - CY;
+      let deg = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+      if (deg < 0) deg += 360;
+      return deg;
+    }
+
+    function minuteFromEvent(evt) { return Math.round(degreesFromEvent(evt) / 6) % 60; }
+    function hourFromEvent(evt) {
+      const h = Math.round(degreesFromEvent(evt) / 30) % 12;
+      return h === 0 ? 12 : h;
+    }
+
+    function startMinuteDrag(evt) {
+      evt.preventDefault();
+      dragging = 'minute';
+      clearResult();
+      setMinuteFromValue(minuteFromEvent(evt));
+    }
+
+    function startHourDrag(evt) {
+      evt.preventDefault();
+      dragging = 'hour';
+      clearResult();
+      setHourFromValue(hourFromEvent(evt));
+    }
+
+    function moveDrag(evt) {
+      if (!dragging) return;
+      evt.preventDefault();
+      if (dragging === 'minute') setMinuteFromValue(minuteFromEvent(evt));
+      if (dragging === 'hour') setHourFromValue(hourFromEvent(evt));
+    }
+
+    function endDrag() { dragging = null; }
+
+    minuteTouch.addEventListener('pointerdown', startMinuteDrag);
+    minuteHand.addEventListener('pointerdown', startMinuteDrag);
+    hourTouch.addEventListener('pointerdown', startHourDrag);
+    hourHand.addEventListener('pointerdown', startHourDrag);
+    svg.addEventListener('pointermove', moveDrag);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+
+    svg.addEventListener('pointerdown', (evt) => {
+      if (evt.target.closest('#sectorGuide')) return;
+      if (evt.target === minuteTouch || evt.target === minuteHand || evt.target === hourTouch || evt.target === hourHand) return;
+      const p = getSvgPoint(evt);
+      const dist = Math.hypot(p.x - CX, p.y - CY);
+      if (dist > 32 && dist <= 112) startHourDrag(evt);
+      if (dist > 112 && dist < 250) startMinuteDrag(evt);
+    });
+
+    setBaseButton.addEventListener('click', () => {
+      clearTimeout(nextTimer);
+      if (step === 'start') {
+        baseTotalMinutes = totalMinutes;
+        step = 'solve';
+        clearResult();
+        updateClock();
+        return;
+      }
+      const startOk = sameClockTime(baseTotalMinutes, problem.startTotal);
+      const answerOk = sameClockTime(totalMinutes, problem.answerTotal);
+      if (startOk && answerOk) {
+        showResult('いいね！', 'good');
+        nextTimer = setTimeout(makeProblem, 1100);
+      } else {
+        showResult('おしい！', 'try');
+      }
+    });
+
+    resetButton.addEventListener('click', resetAttempt);
+
+    svg.addEventListener('dblclick', () => {
+      showNumber = !showNumber;
+      svg.classList.toggle('show-number', showNumber);
+    });
+
+    function sectorColor(minutes) {
+      if (minutes === 10) return { fill: 'rgba(255, 184, 77, .46)', stroke: '#b56a11' };
+      if (minutes === 15) return { fill: 'rgba(179, 231, 137, .48)', stroke: '#4d8b2f' };
+      if (minutes === 30) return { fill: 'rgba(246, 157, 197, .46)', stroke: '#b04b75' };
+      if (minutes === 45) return { fill: 'rgba(188, 168, 255, .46)', stroke: '#6450b7' };
+      return { fill: 'rgba(111, 200, 255, .45)', stroke: '#1678a8' };
+    }
+
+    function sectorPath(minutes, rotation) {
+      const r = 150;
+      const start = rotation;
+      const end = rotation + minutes * 6;
+      const s = polar(r, start);
+      const e = polar(r, end);
+      const large = minutes * 6 > 180 ? 1 : 0;
+      return `M ${CX} ${CY} L ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)} Z`;
+    }
+
+    function showSector(minutes) {
+      sector.minutes = minutes;
+      sector.rotation = baseTotalMinutes !== null ? mod(baseTotalMinutes, 60) * 6 : currentMinute() * 6;
+      sectorGuide.classList.add('show');
+      sectorButtons.forEach(btn => btn.classList.toggle('active', Number(btn.dataset.minutes) === minutes));
+      renderSector();
+      clearResult();
+    }
+
+    function hideSector() {
+      sector.minutes = null;
+      sector.rotation = 0;
+      sector.dragging = false;
+      sectorGuide.classList.remove('show', 'dragging');
+      sectorButtons.forEach(btn => btn.classList.remove('active'));
+    }
+
+    function renderSector() {
+      if (sector.minutes === null) return;
+      const minutes = sector.minutes;
+      const colors = sectorColor(minutes);
+      const path = sectorPath(minutes, sector.rotation);
+      sectorPathEl.setAttribute('d', path);
+      sectorOutlineEl.setAttribute('d', path);
+      sectorPathEl.setAttribute('fill', colors.fill);
+      sectorPathEl.setAttribute('stroke', colors.stroke);
+
+      const mid = sector.rotation + minutes * 3;
+      const labelPoint = polar(70, mid);
+      const handlePoint = polar(154, sector.rotation + minutes * 6);
+      sectorLabel.textContent = `${minutes}分`;
+      sectorLabel.setAttribute('x', labelPoint.x);
+      sectorLabel.setAttribute('y', labelPoint.y + 1);
+      sectorLabelCard.setAttribute('x', labelPoint.x - 46);
+      sectorLabelCard.setAttribute('y', labelPoint.y - 25);
+      sectorHandle.setAttribute('cx', handlePoint.x);
+      sectorHandle.setAttribute('cy', handlePoint.y);
+    }
+
+    function startSectorRotate(evt) {
+      if (sector.minutes === null) return;
+      evt.preventDefault();
+      evt.stopPropagation();
+      sector.dragging = true;
+      sectorGuide.classList.add('dragging');
+      sector.rotation = Math.round(degreesFromEvent(evt) / 6) * 6;
+      renderSector();
+      clearResult();
+    }
+
+    function moveSectorRotate(evt) {
+      if (!sector.dragging) return;
+      evt.preventDefault();
+      sector.rotation = Math.round(degreesFromEvent(evt) / 6) * 6;
+      renderSector();
+    }
+
+    function endSectorRotate() {
+      if (!sector.dragging) return;
+      sector.dragging = false;
+      sectorGuide.classList.remove('dragging');
+    }
+
+    sectorGuide.addEventListener('pointerdown', startSectorRotate);
+    window.addEventListener('pointermove', moveSectorRotate);
+    window.addEventListener('pointerup', endSectorRotate);
+    window.addEventListener('pointercancel', endSectorRotate);
+
+    sectorButtons.forEach(btn => {
+      btn.addEventListener('click', () => showSector(Number(btn.dataset.minutes)));
+    });
+
+    buildClock();
+    makeProblem();
+  </script>
+</body>
+</html>
