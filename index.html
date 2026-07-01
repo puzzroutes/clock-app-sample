@@ -369,7 +369,7 @@
     </div>
 
     <div class="controls" aria-label="操作ボタン">
-      <button id="setBase" class="set-button" aria-label="セットまたは答え合わせ">時間をセット</button>
+      <button id="setBase" class="set-button" aria-label="セットまたは答え合わせ">時間セット</button>
       <button id="resetClock" class="reset-button" aria-label="時計をリセットする">やりなおす</button>
       <button id="back10" aria-label="10分もどる">−10</button>
       <button id="plus10" aria-label="10分すすめる">＋10</button>
@@ -557,7 +557,7 @@
       baseTotalMinutes = null;
       step = 'start';
       totalMinutes = START_CLOCK;
-      setBaseButton.textContent = '時間をセット';
+      setBaseButton.textContent = '時間セット';
 
       const amounts = [1, 5, 10, 15, 20, 25, 30];
       const minuteCandidates = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
@@ -596,7 +596,7 @@
       totalMinutes = START_CLOCK;
       baseTotalMinutes = null;
       step = 'start';
-      setBaseButton.textContent = '時間をセット';
+      setBaseButton.textContent = '時間セット';
       clearResult();
       updateClock();
 
