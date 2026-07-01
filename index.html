@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>ぱずルート みえる化時計β版</title>
 
-   <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-96PXYL98V2"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-96PXYL98V2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
 
-  gtag('config', 'G-96PXYL98V2');
-</script>
+    gtag('config', 'G-96PXYL98V2');
+  </script>
 
   <style>
     :root {
@@ -126,7 +126,8 @@
 
     .clock-wrap {
       position: relative;
-      width: min(94vw, 68svh);
+      /* 🛠️ 修正：縦幅の最大値を 68svh から 45svh に縮小し、スマホ画面内で問題文が押し出されないように改善 */
+      width: min(94vw, 45svh);
       aspect-ratio: 1 / 1;
       max-width: 700px;
       max-height: 700px;
@@ -228,11 +229,9 @@
       stroke-width: 4;
     }
 
-    /* 🔥 バグ修正：opacityを1にしてデジタル数字を常に表示 */
+    /* 🛠️ 修正：文字盤中心のデジタル数字を完全に非表示にする */
     .time-display {
-      opacity: 1;
-      pointer-events: none;
-      transition: opacity .12s ease;
+      display: none;
     }
 
     .time-card {
@@ -370,7 +369,6 @@
     </div>
 
     <div class="controls" aria-label="操作ボタン">
-      <!-- UI向上のため初期テキストを「しゅっぱつ時間をセット」に変更 -->
       <button id="setBase" class="set-button" aria-label="セットまたは答え合わせ">しゅっぱつ時間をセット</button>
       <button id="resetClock" class="reset-button" aria-label="時計をリセットする">やりなおす</button>
       <button id="back10" aria-label="10分もどる">−10</button>
