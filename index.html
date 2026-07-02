@@ -15,6 +15,7 @@
     gtag('config', 'G-96PXYL98V2');
   </script>
 
+  
   <style>
     :root {
       --bg: #fffaf1;
@@ -33,12 +34,24 @@
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+    /*
     html, body {
       margin: 0;
       width: 100%;
       min-height: 100%;
       background: var(--bg);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      touch-action: none;
+      overflow: hidden;
+    }
+    */
+    html, body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      background: var(--bg);
+      /* BIZ UDGothicを一番最初に追加しました */
+      font-family: "BIZ UDGothic", system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
       touch-action: none;
       overflow: hidden;
     }
@@ -223,6 +236,11 @@
       button { min-height: 52px; }
     }
   </style>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic&display=swap" rel="stylesheet">
+  
 </head>
 <body>
   <main class="app" aria-label="時計の文章問題アプリ">
@@ -231,7 +249,7 @@
         <!-- キャラクター画像を追加 -->
         <img src="mr_puzz.png" alt="キャラクター" class="puzz-icon" aria-hidden="true" />
         <!-- 問題文のIDをここに移動して、画像が上書きされないようにする -->
-        <span id="problemText">10時20分の15分前は？</span>
+        <span id="problemText">10時20分の<br>15分前は？</span>
       </div>
       <div id="resultText" class="result" aria-live="polite"></div>
     </div>
